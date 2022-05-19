@@ -5,7 +5,7 @@ require './module/tile_type'
 
 # Describes a single Tile on the world grid
 class Tile
-  attr_reader :x, :y, :pixel_x, :pixel_y, :pixel_center_point
+  attr_reader :x, :y, :pixel_x, :pixel_y
   attr_accessor :neighbors, :neighbor_states, :state, :room_id, :hall_id
 
   # @param [Integer] x: Grid X coordinate of the tile
@@ -15,7 +15,6 @@ class Tile
     @y = y
     @pixel_x = x * (Constants::TILE_SIZE + Constants::MARGIN)
     @pixel_y = y * (Constants::TILE_SIZE + Constants::MARGIN)
-    @pixel_center_point = Point.new(@pixel_x, @pixel_y)
     @room_id = -1
     @hall_id = -1
     @neighbors = []

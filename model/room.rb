@@ -13,9 +13,9 @@ class Room
   # @param [Tile] center_tile
   # @param [Integer] width
   # @param [Integer] height
-  # @param [List<Tile>] non_perimeter_tiles
-  # @param [List<Tile>] perimeter_tiles
-  # @param [List<Tile>] corner_tiles
+  # @param [Array<Tile>] non_perimeter_tiles
+  # @param [Array<Tile>] perimeter_tiles
+  # @param [Array<Tile>] corner_tiles
   def initialize(room_id,
                  center_tile,
                  width,
@@ -27,9 +27,9 @@ class Room
     @center_tile = center_tile
     @width = width
     @height = height
-    @inner_tiles = non_perimeter_tiles
-    @perimeter_tiles = perimeter_tiles
-    @corner_tiles = corner_tiles
+    @inner_tiles = non_perimeter_tiles.dup
+    @perimeter_tiles = perimeter_tiles.dup
+    @corner_tiles = corner_tiles.dup
     @halls = Set.new
     @perimeter_wo_halls = @perimeter_tiles.dup
     @perimeter_w_corners = perimeter_tiles + corner_tiles

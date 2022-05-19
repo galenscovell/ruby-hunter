@@ -7,7 +7,7 @@ class Hall
   attr_reader :hall_id, :start_tile, :end_tile, :tiles, :connecting_room_ids
 
   # @param [Integer] hall_id
-  # @param [List<Tile>] tiles
+  # @param [Array<Tile>] tiles
   def initialize(hall_id, tiles)
     @hall_id = hall_id
     @connecting_room_ids = Set.new

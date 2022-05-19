@@ -10,10 +10,15 @@ class Window < Gosu::Window
     super(Constants::SCREEN_WIDTH, Constants::SCREEN_HEIGHT, false)
     self.caption = 'Ruby Miner'
     self.borderless = false
-    @dungeon = Dungeon.new(Constants::SCREEN_WIDTH, Constants::SCREEN_HEIGHT, 4,
-                           4, 6,
-                           4, 6,
-                           4, 6)
+    @dungeon = Dungeon.new(Constants::SCREEN_WIDTH,
+                           Constants::SCREEN_HEIGHT,
+                           4,
+                           4,
+                           6,
+                           4,
+                           6,
+                           4,
+                           6)
   end
 
   def update
