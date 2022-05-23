@@ -17,14 +17,12 @@ class Hall
 
     check_states = [TileType::EMPTY, TileType::PADDING, TileType::CORNER]
     @tiles.each do |tile|
-      tile.hall_id = @hall_id
-      tile.state = TileType::HALL
+      tile.set_hall(@hall_id)
+      tile.become_hall
 
-      tile.neighbors.each do |neighbor|
-        if check_states.include? neighbor.state
-          neighbor.hall_id = @hall_id
-          neighbor.state = TileType::WALL
-        end
+      tile.get_neighbors(check_states).each do |neighbor|
+        neighbor.set_hall(@hall_id)
+        neighbor.become_wall
       end
     end
   end

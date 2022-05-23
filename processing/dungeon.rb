@@ -12,15 +12,7 @@ require './module/tile_type'
 class Dungeon
   attr_accessor :room_map, :hall_map
 
-  def initialize(pixel_width,
-                 pixel_height,
-                 target_rooms,
-                 min_room_width,
-                 max_room_width,
-                 min_room_height,
-                 max_room_height,
-                 min_hall_length,
-                 max_hall_length)
+  def initialize(pixel_width, pixel_height, target_rooms, min_room_width, max_room_width, min_room_height, max_room_height, min_hall_length, max_hall_length)
     @orthogonal_neighbors = [
       Point.new(0, 1),
       Point.new(1, 0),
@@ -49,6 +41,12 @@ class Dungeon
     build_initial_hall
   end
 
+  # Attempt to build a new room branching off of a previously built one
+  # @return [Boolean] return False when no more can be built or target amount reached
+  def work_remains
+
+  end
+
   # Build initial Hall out from central perimeter
   def build_initial_hall
     center_col = (@cols - 1) / 2
@@ -61,34 +59,34 @@ class Dungeon
     row_min = center_row - row_range
     row_max = center_row + row_range
 
-    center_perimeter_tiles = Array.new
+    center_perimeter_tiles = []
+
     (0...@cols).each do |x|
       (0...@rows).each do |y|
         tile = @grid[x][y]
+        next unless tile.x.zero? || tile.x == (@cols - 1) || tile.y.zero? || tile.y == (@rows - 1)
 
         # Set entire perimeter as padding to not be used later
-        if tile.x == 0 || tile.x == (@cols - 1) || tile.y == 0 || tile.y == (@rows - 1)
-          tile.state = TileType::PADDING
+        tile.become_padding
 
-          # Set central tiles as usable for the start Hall
-          if (tile.x > col_min && tile.x < col_max) || (tile.y > row_min && tile.y < row_max)
-            center_perimeter_tiles.append(tile)
-          end
+        # Set central tiles as usable for the start Hall
+        if (tile.x > col_min && tile.x < col_max) || (tile.y > row_min && tile.y < row_max)
+          center_perimeter_tiles.append(tile)
         end
       end
     end
 
     hall_built = false
-    while !hall_built && center_perimeter_tiles.count > 0
+    while !hall_built && center_perimeter_tiles.count.positive?
       random_tile = center_perimeter_tiles.sample
+      next unless random_tile
+
       center_perimeter_tiles.delete(random_tile)
 
       tiles, direction = try_hall(random_tile)
-      if direction != [0,0]
-        if end_hall_with_room(tiles, direction)
-          hall_built = true
-        end
-      end
+      next unless direction != [0, 0]
+
+      hall_built = true if end_hall_with_room(tiles, direction)
     end
   end
 
@@ -100,33 +98,33 @@ class Dungeon
     # Find direction of Hall by locating which direction is empty/padding
     hall_dir = [0,0]
     @orthogonal_neighbors.shuffle
+
+    check_states = [TileType::EMPTY, TileType::PADDING]
+
     @orthogonal_neighbors.each do |coord|
       tile = get_tile(start_tile.x + coord.x, start_tile.y + coord.y)
-      if tile && (tile.state == TileType::EMPTY || tile.state == TileType::PADDING)
+      if tile&.one_of?(check_states)
         hall_dir = [coord.x, coord.y]
         break
       end
     end
 
     # No empty direction for this Tile
-    if hall_dir == [0,0]
-      [[], [0,0]]
-    end
+    return [[], [0,0]] if hall_dir == [0,0]
 
     # Find Tiles that would compose Hall
     hall_len = rand(@min_hall_length..@max_hall_length)
-    hall_tiles = Array.new
+    hall_tiles = []
     curr_tile = start_tile
+
     (0..hall_len).each do |n|
       curr_tile = get_tile(curr_tile.x + hall_dir[0], curr_tile.y + hall_dir[1])
-      if !curr_tile || !(curr_tile.state == TileType::EMPTY || curr_tile.state == TileType::PADDING)
-        [[], [0,0]]
-      end
+      return [[], [0, 0]] if !curr_tile || !curr_tile.one_of?(check_states)
 
       hall_tiles.append(curr_tile)
     end
 
-    if hall_tiles.count > 0
+    if hall_tiles.count.positive?
       [hall_tiles, hall_dir]
     else
       [[], [0,0]]
@@ -139,24 +137,22 @@ class Dungeon
   # @param [Array<Integer>] hall_dir
   # @return [Boolean] True if Hall and Room were successfully built
   def end_hall_with_room(hall_tiles, hall_dir)
-    start_tile = hall_tiles[0]
-    end_tile = hall_tiles[-1]
+    start_tile = hall_tiles.first
+    end_tile = hall_tiles.last
+    return false if !start_tile || !end_tile
 
     room = build_room(end_tile, hall_dir)
     if room
       new_hall = Hall.new(@hall_counter, hall_tiles)
+      room.add_hall(new_hall)
       @hall_counter += 1
 
-      if @room_map.include? start_tile.room_id
-        @room_map[start_tile.room_id].add_hall(new_hall)
-      end
+      @room_map[start_tile.room_id].add_hall(new_hall) if @room_map.include?(start_tile.room_id)
 
       @branchable_rooms.append(room)
-      unless @hall_map.include? new_hall.hall_id
-        @hall_map[new_hall.hall_id] = new_hall
-      end
+      @hall_map[new_hall.hall_id] = new_hall unless @hall_map.include?(new_hall.hall_id)
 
-      true
+      return true
     end
 
     false
@@ -172,14 +168,10 @@ class Dungeon
                            hall_end_tile.y + hall_dir[1] * room_height)
 
     # Center Tile not viable
-    unless center_tile
-      nil
-    end
+    return nil unless center_tile
 
     room = try_quad_room(center_tile, room_width, room_height)
-    unless room
-      nil
-    end
+    return nil unless room
 
     pad_room(room)
     @room_map[room.room_id] = room
@@ -198,9 +190,8 @@ class Dungeon
     (-room_width...room_width).each do |dx|
       (-room_height...room_height).each do |dy|
         tile = get_tile(center_tile.x + dx, center_tile.y + dy)
-        if !tile || tile.state != TileType::EMPTY
-          nil
-        end
+
+        return nil if !tile || !tile.empty?
 
         # Find perimeter
         if dx.abs == room_width || dx.abs == room_height
@@ -216,13 +207,7 @@ class Dungeon
       end
     end
 
-    room = Room.new(@room_counter,
-                    center_tile,
-                    room_width,
-                    room_height,
-                    Array(floor_tiles),
-                    Array(perimeter_tiles),
-                    Array(corner_tiles))
+    room = Room.new(@room_counter, center_tile, room_width, room_height, Array(floor_tiles), Array(perimeter_tiles), Array(corner_tiles))
     @room_counter += 1
     room
   end
@@ -231,16 +216,13 @@ class Dungeon
   # aren't built touching each other
   # @param [Room] room
   def pad_room(room)
+    check_states = [TileType::EMPTY]
+
     room.perimeter_w_corners.each do |corner|
-      corner.neighbors.each do |neighbor|
-        if neighbor.state == TileType::EMPTY
-          neighbor.state == TileType::PADDING
-          neighbor.neighbors.each do |sub_neighbor|
-            if sub_neighbor.state == TileType::EMPTY
-              sub_neighbor.state == TileType::PADDING
-            end
-          end
-        end
+      corner.get_neighbors(check_states).each do |neighbor|
+        neighbor.become_padding
+
+        neighbor.get_neighbors(check_states).each(&:become_padding)
       end
     end
   end
@@ -249,11 +231,7 @@ class Dungeon
   # @param [Integer] x
   # @param [Integer] y
   def get_tile(x, y)
-    if x > -1 && x < @cols && y > -1 && y < @rows
-      @grid[x][y]
-    else
-      nil
-    end
+    @grid[x][y] if x > -1 && x < @cols && y > -1 && y < @rows
   end
 
   # Construct the base Tile grid for the dungeon
@@ -282,13 +260,13 @@ class Dungeon
           tile_pos.add(@orthogonal_neighbors[3])
         ]
 
-        neighbors = Array.new
+        neighbors = []
         theoretical_neighbors.each do |coord|
           neighbor_tile = get_tile(coord.x, coord.y)
           neighbors.append(neighbor_tile) if neighbor_tile
         end
 
-        tile.neighbors = neighbors
+        tile.set_neighbors(neighbors)
       end
     end
   end
@@ -297,8 +275,7 @@ class Dungeon
   def update_neighbors
     (0...@cols).each do |x|
       (0...@rows).each do |y|
-        tile = @grid[x][y]
-        tile.set_neighbor_states
+        @grid[x][y].set_neighbor_states
       end
     end
   end
@@ -308,23 +285,21 @@ class Dungeon
     (0...@cols).each do |x|
       (0...@rows).each do |y|
         tile = @grid[x][y]
-        case tile.state
-        when TileType::EMPTY
+
+        if tile.empty?
           Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::EMPTY)
-        when TileType::FLOOR
+        elsif tile.floor?
           Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::FLOOR)
-        when TileType::WALL
+        elsif tile.wall?
           Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::WALL)
-        when TileType::CORNER
+        elsif tile.corner?
           Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::CORNER)
-        when TileType::HALL
+        elsif tile.hall?
           Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::HALL)
-        when TileType::PADDING
+        elsif tile.padding?
           Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::PADDING)
-        when TileType::WATER
+        elsif tile.water?
           Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::WATER)
-        else
-          # type code here
         end
       end
     end

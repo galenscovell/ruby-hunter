@@ -16,13 +16,7 @@ class Room
   # @param [Array<Tile>] non_perimeter_tiles
   # @param [Array<Tile>] perimeter_tiles
   # @param [Array<Tile>] corner_tiles
-  def initialize(room_id,
-                 center_tile,
-                 width,
-                 height,
-                 non_perimeter_tiles,
-                 perimeter_tiles,
-                 corner_tiles)
+  def initialize(room_id, center_tile, width, height, non_perimeter_tiles, perimeter_tiles, corner_tiles)
     @room_id = room_id
     @center_tile = center_tile
     @width = width
@@ -35,27 +29,25 @@ class Room
     @perimeter_w_corners = perimeter_tiles + corner_tiles
 
     @inner_tiles.each do |tile|
-      tile.room_id = @room_id
-      tile.state = TileType::FLOOR
+      tile.set_room(@room_id)
+      tile.become_floor
     end
 
     @perimeter_tiles.each do |tile|
-      tile.room_id = @room_id
-      tile.state = TileType::WALL
+      tile.set_room(@room_id)
+      tile.become_wall
     end
 
     @corner_tiles.each do |tile|
-      tile.room_id = @room_id
-      tile.state = TileType::CORNER
+      tile.set_room(@room_id)
+      tile.become_corner
     end
   end
 
   # Reset room perimeter, not including hall tiles
   def reset_perimeter
     @halls.each do |hall|
-      if @perimeter_wo_halls.include? hall.start_tile
-        @perimeter_wo_halls.delete(hall.start_tile)
-      end
+      @perimeter_wo_halls.delete(hall.start_tile) if @perimeter_wo_halls.include?(hall.start_tile)
     end
 
     @perimeter_tiles = @perimeter_wo_halls.dup
