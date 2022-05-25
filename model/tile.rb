@@ -31,7 +31,7 @@ class Tile
   # Get all neighbors of a certain state(s), or all if no states passed
   # @param [Array<Integer>] of_states: Only neighbors with these states, or all if nil
   # @return [Array<Tile>]
-  def get_neighbors(of_states=nil)
+  def get_neighbors(of_states = nil)
     if of_states
       to_return = []
       @neighbors.each do |n|

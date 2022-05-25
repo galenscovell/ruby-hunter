@@ -5,8 +5,7 @@ require './module/tile_type'
 
 # Describes a generated room composed of tiles
 class Room
-  attr_reader :room_id, :center_tile, :width, :height,
-              :inner_tiles, :corner_tiles, :perimeter_w_corners, :halls
+  attr_reader :room_id, :center_tile, :width, :height, :inner_tiles, :corner_tiles, :perimeter_w_corners, :halls
   attr_accessor :perimeter_tiles
 
   # @param [Integer] room_id

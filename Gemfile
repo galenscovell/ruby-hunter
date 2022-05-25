@@ -1,5 +1,6 @@
 source 'https://rubygems.org'
 
+gem 'gosu'
 gem 'rspec'
 gem 'rubocop'
-gem 'gosu'
+gem 'solargraph'

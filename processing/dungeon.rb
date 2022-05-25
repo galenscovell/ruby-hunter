@@ -117,7 +117,7 @@ class Dungeon
     hall_tiles = []
     curr_tile = start_tile
 
-    (0..hall_len).each do |n|
+    (0..hall_len).each do
       curr_tile = get_tile(curr_tile.x + hall_dir[0], curr_tile.y + hall_dir[1])
       return [[], [0, 0]] if !curr_tile || !curr_tile.one_of?(check_states)
 
@@ -164,8 +164,7 @@ class Dungeon
   def build_room(hall_end_tile, hall_dir)
     room_width = rand(@min_room_width..@max_room_width)
     room_height = rand(@min_room_height..@max_room_height)
-    center_tile = get_tile(hall_end_tile.x + hall_dir[0] * room_width,
-                           hall_end_tile.y + hall_dir[1] * room_height)
+    center_tile = get_tile(hall_end_tile.x + hall_dir[0] * room_width, hall_end_tile.y + hall_dir[1] * room_height)
 
     # Center Tile not viable
     return nil unless center_tile

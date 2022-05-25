@@ -9,3 +9,13 @@ I made this over the course of a few days to ramp back up on Ruby for an intervi
 ### Running
 * `bundle install`
 * `ruby main.rb`
+
+### Development
+* For Visual Studio Debugging, install the following gems globally:
+    * `gem install ruby-debug-ide`
+    * `gem install rubocop`
+* Then install the following VSCode extensions:
+    * `Ruby`
+    * `Ruby Solargraph`
+    * `ruby-rubocop`
+    * `VSCode Ruby`
