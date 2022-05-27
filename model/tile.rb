@@ -1,4 +1,3 @@
-require './model/point'
 require './module/colors'
 require './module/constants'
 require './module/tile_type'
@@ -17,14 +16,16 @@ class Tile
     @room_id = -1
     @hall_id = -1
     @neighbors = []
-    @neighbor_states = Array.new(Constants::NUM_TILE_STATES)
+    @neighbor_states = [0] * Constants::NUM_TILE_STATES
     @state = TileType::EMPTY
   end
 
-  def set_neighbor_states
-    @neighbor_states = Array.new(Constants::NUM_TILE_STATES)
-    @neighbors.each do |n|
-      @neighbor_states[n.state] += 1
+  def update_neighbor_states
+    return unless @neighbors
+
+    @neighbor_states = [0] * Constants::NUM_TILE_STATES
+    @neighbors.each do |tile|
+      @neighbor_states[tile.state] += 1
     end
   end
 

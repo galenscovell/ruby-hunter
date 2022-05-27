@@ -1,29 +1,37 @@
-require 'gosu'
-
 require './model/hall'
-require './model/point'
+require './model/vector2'
 require './model/room'
 require './model/tile'
-require './module/colors'
 require './module/constants'
 require './module/tile_type'
 
 # Procedurally generates a dungeon composed of rooms, halls and tiles
 class Dungeon
   attr_accessor :room_map, :hall_map
+  attr_reader :grid, :rows, :cols, :progress_pct
 
-  def initialize(pixel_width, pixel_height, target_rooms, min_room_width, max_room_width, min_room_height, max_room_height, min_hall_length, max_hall_length)
+  def initialize(
+    pixel_width:,
+    pixel_height:,
+    target_rooms:,
+    min_room_width:,
+    max_room_width:,
+    min_room_height:,
+    max_room_height:,
+    min_hall_length:,
+    max_hall_length:
+  )
     @orthogonal_neighbors = [
-      Point.new(0, 1),
-      Point.new(1, 0),
-      Point.new(0, -1),
-      Point.new(-1, 0)
+      Vector2.new(0, 1),
+      Vector2.new(1, 0),
+      Vector2.new(0, -1),
+      Vector2.new(-1, 0)
     ]
 
     @cols = pixel_width / (Constants::TILE_SIZE + Constants::MARGIN)
     @rows = pixel_height / (Constants::TILE_SIZE + Constants::MARGIN)
-    @room_counter = 0
-    @hall_counter = 0
+    @room_counter = 1
+    @hall_counter = 1
 
     @target_rooms = target_rooms
     @min_room_width = min_room_width
@@ -33,18 +41,40 @@ class Dungeon
     @min_hall_length = min_hall_length
     @max_hall_length = max_hall_length
 
+    @progress_pct = 0.0
+    @progress_pct_per_room = 1.0 / @target_rooms
+
     @room_map = {}
     @hall_map = {}
     @branchable_rooms = []
     @grid = construct_grid
-    set_neighbors
-    build_initial_hall
   end
 
   # Attempt to build a new room branching off of a previously built one
   # @return [Boolean] return False when no more can be built or target amount reached
   def work_remains
+    if @room_counter == @target_rooms || @branchable_rooms.count.zero?
+      @progress_pct = 1.0
+      return false
+    end
 
+    random_room = @branchable_rooms.sample
+    if random_room.perimeter_tiles.zero?
+      @branchable_rooms.delete(random_room)
+      random_room.reset_perimeter
+      return true
+    end
+
+    random_perimeter_tile = random_room.perimeter_tiles.sample
+    random_room.perimeter_tiles.delete(random_perimeter_tile)
+
+    tiles, direction = try_hall(random_perimeter_tile)
+    if !direction.zero? && end_hall_with_room(tiles, direction)
+      @room_counter += 1
+      @progress_pct += @progress_pct_per_room
+    end
+
+    true
   end
 
   # Build initial Hall out from central perimeter
@@ -94,9 +124,10 @@ class Dungeon
   # Return list of Hall Tiles and its vector direction
   # If Hall is not viable, return null Tiles and empty vector
   # @param [Tile] start_tile
+  # @return [[Array<Tile>, Vector2]]
   def try_hall(start_tile)
     # Find direction of Hall by locating which direction is empty/padding
-    hall_dir = [0,0]
+    hall_dir = Vector2.new
     @orthogonal_neighbors.shuffle
 
     check_states = [TileType::EMPTY, TileType::PADDING]
@@ -104,13 +135,13 @@ class Dungeon
     @orthogonal_neighbors.each do |coord|
       tile = get_tile(start_tile.x + coord.x, start_tile.y + coord.y)
       if tile&.one_of?(check_states)
-        hall_dir = [coord.x, coord.y]
+        hall_dir.set(coord.x, coord.y)
         break
       end
     end
 
-    # No empty direction for this Tile
-    return [[], [0,0]] if hall_dir == [0,0]
+    # No usable direction for this Tile
+    return [[], hall_dir] if hall_dir.zero?
 
     # Find Tiles that would compose Hall
     hall_len = rand(@min_hall_length..@max_hall_length)
@@ -118,8 +149,8 @@ class Dungeon
     curr_tile = start_tile
 
     (0..hall_len).each do
-      curr_tile = get_tile(curr_tile.x + hall_dir[0], curr_tile.y + hall_dir[1])
-      return [[], [0, 0]] if !curr_tile || !curr_tile.one_of?(check_states)
+      curr_tile = get_tile(curr_tile.x + hall_dir.x, curr_tile.y + hall_dir.y)
+      return [[], Vector2.new] if !curr_tile || !curr_tile.one_of?(check_states)
 
       hall_tiles.append(curr_tile)
     end
@@ -127,14 +158,14 @@ class Dungeon
     if hall_tiles.count.positive?
       [hall_tiles, hall_dir]
     else
-      [[], [0,0]]
+      [[], Vector2.new]
     end
   end
 
   # If Hall was viable, continue to attempt to build room at end of it
   # If Room is also viable, finalize both and return true
   # @param [Array<Tile>] hall_tiles
-  # @param [Array<Integer>] hall_dir
+  # @param [Vector2] hall_dir
   # @return [Boolean] True if Hall and Room were successfully built
   def end_hall_with_room(hall_tiles, hall_dir)
     start_tile = hall_tiles.first
@@ -160,11 +191,14 @@ class Dungeon
 
   # Build a room at the end of a Hall. If viable return it, otherwise null
   # @param [Tile] hall_end_tile
-  # @param [Array<Integer>] hall_dir
+  # @param [Vector2] hall_dir
   def build_room(hall_end_tile, hall_dir)
     room_width = rand(@min_room_width..@max_room_width)
     room_height = rand(@min_room_height..@max_room_height)
-    center_tile = get_tile(hall_end_tile.x + hall_dir[0] * room_width, hall_end_tile.y + hall_dir[1] * room_height)
+    center_tile = get_tile(
+      hall_end_tile.x + hall_dir.x * room_width,
+      hall_end_tile.y + hall_dir.y * room_height
+    )
 
     # Center Tile not viable
     return nil unless center_tile
@@ -186,14 +220,14 @@ class Dungeon
     perimeter_tiles = Set.new
     corner_tiles = Set.new
 
-    (-room_width...room_width).each do |dx|
-      (-room_height...room_height).each do |dy|
+    (-room_width..room_width).each do |dx|
+      (-room_height..room_height).each do |dy|
         tile = get_tile(center_tile.x + dx, center_tile.y + dy)
 
         return nil if !tile || !tile.empty?
 
         # Find perimeter
-        if dx.abs == room_width || dx.abs == room_height
+        if dx.abs == room_width || dy.abs == room_height
           # Set corner Tiles, handled differently downstream
           if dx.abs == room_width && dy.abs == room_height
             corner_tiles.add(tile)
@@ -206,9 +240,15 @@ class Dungeon
       end
     end
 
-    room = Room.new(@room_counter, center_tile, room_width, room_height, Array(floor_tiles), Array(perimeter_tiles), Array(corner_tiles))
-    @room_counter += 1
-    room
+    Room.new(
+      @room_counter,
+      center_tile,
+      room_width,
+      room_height,
+      Array(floor_tiles),
+      Array(perimeter_tiles),
+      Array(corner_tiles)
+    )
   end
 
   # Add a two Tile border of padding around created Room so they
@@ -217,10 +257,9 @@ class Dungeon
   def pad_room(room)
     check_states = [TileType::EMPTY]
 
-    room.perimeter_w_corners.each do |corner|
+    room.perimeter_w_corner_tiles.each do |corner|
       corner.get_neighbors(check_states).each do |neighbor|
         neighbor.become_padding
-
         neighbor.get_neighbors(check_states).each(&:become_padding)
       end
     end
@@ -251,7 +290,7 @@ class Dungeon
     (0...@cols).each do |x|
       (0...@rows).each do |y|
         tile = @grid[x][y]
-        tile_pos = Point.new(tile.x, tile.y)
+        tile_pos = Vector2.new(tile.x, tile.y)
         theoretical_neighbors = [
           tile_pos.add(@orthogonal_neighbors[0]),
           tile_pos.add(@orthogonal_neighbors[1]),
@@ -274,32 +313,7 @@ class Dungeon
   def update_neighbors
     (0...@cols).each do |x|
       (0...@rows).each do |y|
-        @grid[x][y].set_neighbor_states
-      end
-    end
-  end
-
-  # Render the generated dungeon as it currently is
-  def render
-    (0...@cols).each do |x|
-      (0...@rows).each do |y|
-        tile = @grid[x][y]
-
-        if tile.empty?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::EMPTY)
-        elsif tile.floor?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::FLOOR)
-        elsif tile.wall?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::WALL)
-        elsif tile.corner?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::CORNER)
-        elsif tile.hall?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::HALL)
-        elsif tile.padding?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::PADDING)
-        elsif tile.water?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::WATER)
-        end
+        @grid[x][y].update_neighbor_states
       end
     end
   end
