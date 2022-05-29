@@ -2,7 +2,8 @@ require 'set'
 
 # Describes a generated room composed of tiles
 class Room
-  attr_reader :room_id, :center_tile, :width, :height, :floor_tiles, :perimeter_tiles, :corner_tiles, :perimeter_w_corner_tiles, :halls
+  attr_reader :room_id, :center_tile, :width, :height, :floor_tiles,
+              :perimeter_tiles, :corner_tiles, :perimeter_w_corner_tiles, :halls
 
   # @param [Integer] room_id
   # @param [Tile] center_tile

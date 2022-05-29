@@ -8,7 +8,8 @@ class Hall
 
   # @param [Integer] hall_id
   # @param [Array<Tile>] tiles
-  def initialize(hall_id, tiles)
+  # @param [Grid] grid
+  def initialize(hall_id, tiles, grid)
     @hall_id = hall_id
     @connecting_room_ids = Set.new
     @start_tile = tiles[0]
@@ -20,7 +21,7 @@ class Hall
       tile.set_hall(@hall_id)
       tile.become_hall
 
-      tile.get_neighbors(check_states).each do |neighbor|
+      grid.get_neighbors(tile, check_states).each do |neighbor|
         neighbor.set_hall(@hall_id)
         neighbor.become_wall
       end

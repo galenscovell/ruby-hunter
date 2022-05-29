@@ -1,7 +1,7 @@
 require 'gosu'
 
-require './module/constants'
 require './module/colors'
+require './module/constants'
 require './processing/dungeon'
 
 # The primary window for the application
@@ -22,8 +22,7 @@ class Window < Gosu::Window
       min_hall_length: 4,
       max_hall_length: 6
     )
-    @dungeon.set_neighbors
-    @dungeon.build_initial_hall
+
     @constructing = true
   end
 
@@ -36,25 +35,21 @@ class Window < Gosu::Window
   end
 
   def draw
-    (0...@dungeon.cols).each do |x|
-      (0...@dungeon.rows).each do |y|
-        tile = @dungeon.grid[x][y]
-
-        if tile.empty?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::EMPTY)
-        elsif tile.floor?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::FLOOR)
-        elsif tile.wall?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::WALL)
-        elsif tile.corner?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::CORNER)
-        elsif tile.hall?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::HALL)
-        elsif tile.padding?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::PADDING)
-        elsif tile.water?
-          Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::WATER)
-        end
+    @dungeon.grid.each do |tile|
+      if tile.empty?
+        Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::EMPTY)
+      elsif tile.floor?
+        Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::FLOOR)
+      elsif tile.wall?
+        Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::WALL)
+      elsif tile.corner?
+        Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::CORNER)
+      elsif tile.hall?
+        Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::HALL)
+      elsif tile.padding?
+        Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::PADDING)
+      elsif tile.water?
+        Gosu::draw_rect(tile.pixel_x, tile.pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, Colors::WATER)
       end
     end
   end

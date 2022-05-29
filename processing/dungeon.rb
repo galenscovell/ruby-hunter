@@ -1,8 +1,10 @@
+require 'set'
+
+require './model/grid'
 require './model/hall'
-require './model/vector2'
 require './model/room'
 require './model/tile'
-require './module/constants'
+require './model/vector2'
 require './module/tile_type'
 
 # Procedurally generates a dungeon composed of rooms, halls and tiles
@@ -21,15 +23,6 @@ class Dungeon
     min_hall_length:,
     max_hall_length:
   )
-    @orthogonal_neighbors = [
-      Vector2.new(0, 1),
-      Vector2.new(1, 0),
-      Vector2.new(0, -1),
-      Vector2.new(-1, 0)
-    ]
-
-    @cols = pixel_width / (Constants::TILE_SIZE + Constants::MARGIN)
-    @rows = pixel_height / (Constants::TILE_SIZE + Constants::MARGIN)
     @room_counter = 1
     @hall_counter = 1
 
@@ -47,7 +40,9 @@ class Dungeon
     @room_map = {}
     @hall_map = {}
     @branchable_rooms = []
-    @grid = construct_grid
+
+    @grid = Grid.new(pixel_width, pixel_height)
+    build_initial_hall
   end
 
   # Attempt to build a new room branching off of a previously built one
@@ -59,7 +54,9 @@ class Dungeon
     end
 
     random_room = @branchable_rooms.sample
-    if random_room.perimeter_tiles.zero?
+    return unless random_room
+
+    if random_room.perimeter_tiles.count.zero?
       @branchable_rooms.delete(random_room)
       random_room.reset_perimeter
       return true
@@ -79,32 +76,7 @@ class Dungeon
 
   # Build initial Hall out from central perimeter
   def build_initial_hall
-    center_col = (@cols - 1) / 2
-    center_row = (@rows - 1) / 2
-    col_range = @cols / 3
-    row_range = @rows / 3
-
-    col_min = center_col - col_range
-    col_max = center_col + col_range
-    row_min = center_row - row_range
-    row_max = center_row + row_range
-
-    center_perimeter_tiles = []
-
-    (0...@cols).each do |x|
-      (0...@rows).each do |y|
-        tile = @grid[x][y]
-        next unless tile.x.zero? || tile.x == (@cols - 1) || tile.y.zero? || tile.y == (@rows - 1)
-
-        # Set entire perimeter as padding to not be used later
-        tile.become_padding
-
-        # Set central tiles as usable for the start Hall
-        if (tile.x > col_min && tile.x < col_max) || (tile.y > row_min && tile.y < row_max)
-          center_perimeter_tiles.append(tile)
-        end
-      end
-    end
+    center_perimeter_tiles = @grid.find_central_perimeter_tiles
 
     hall_built = false
     while !hall_built && center_perimeter_tiles.count.positive?
@@ -114,7 +86,7 @@ class Dungeon
       center_perimeter_tiles.delete(random_tile)
 
       tiles, direction = try_hall(random_tile)
-      next unless direction != [0, 0]
+      next if direction.zero?
 
       hall_built = true if end_hall_with_room(tiles, direction)
     end
@@ -128,14 +100,14 @@ class Dungeon
   def try_hall(start_tile)
     # Find direction of Hall by locating which direction is empty/padding
     hall_dir = Vector2.new
-    @orthogonal_neighbors.shuffle
+    @grid.orthogonal.shuffle
 
     check_states = [TileType::EMPTY, TileType::PADDING]
 
-    @orthogonal_neighbors.each do |coord|
-      tile = get_tile(start_tile.x + coord.x, start_tile.y + coord.y)
+    @grid.orthogonal.each do |vector|
+      tile = @grid.get_tile(start_tile.x + vector.x, start_tile.y + vector.y)
       if tile&.one_of?(check_states)
-        hall_dir.set(coord.x, coord.y)
+        hall_dir.set(vector.x, vector.y)
         break
       end
     end
@@ -145,21 +117,19 @@ class Dungeon
 
     # Find Tiles that would compose Hall
     hall_len = rand(@min_hall_length..@max_hall_length)
-    hall_tiles = []
+    hall_tiles = Array[start_tile]
     curr_tile = start_tile
 
     (0..hall_len).each do
-      curr_tile = get_tile(curr_tile.x + hall_dir.x, curr_tile.y + hall_dir.y)
+      curr_tile = @grid.get_tile(curr_tile.x + hall_dir.x, curr_tile.y + hall_dir.y)
       return [[], Vector2.new] if !curr_tile || !curr_tile.one_of?(check_states)
 
       hall_tiles.append(curr_tile)
     end
 
-    if hall_tiles.count.positive?
-      [hall_tiles, hall_dir]
-    else
-      [[], Vector2.new]
-    end
+    return [hall_tiles, hall_dir] if hall_tiles.count.positive?
+
+    [[], Vector2.new]
   end
 
   # If Hall was viable, continue to attempt to build room at end of it
@@ -174,7 +144,7 @@ class Dungeon
 
     room = build_room(end_tile, hall_dir)
     if room
-      new_hall = Hall.new(@hall_counter, hall_tiles)
+      new_hall = Hall.new(@hall_counter, hall_tiles, @grid)
       room.add_hall(new_hall)
       @hall_counter += 1
 
@@ -195,7 +165,7 @@ class Dungeon
   def build_room(hall_end_tile, hall_dir)
     room_width = rand(@min_room_width..@max_room_width)
     room_height = rand(@min_room_height..@max_room_height)
-    center_tile = get_tile(
+    center_tile = @grid.get_tile(
       hall_end_tile.x + hall_dir.x * room_width,
       hall_end_tile.y + hall_dir.y * room_height
     )
@@ -222,7 +192,7 @@ class Dungeon
 
     (-room_width..room_width).each do |dx|
       (-room_height..room_height).each do |dy|
-        tile = get_tile(center_tile.x + dx, center_tile.y + dy)
+        tile = @grid.get_tile(center_tile.x + dx, center_tile.y + dy)
 
         return nil if !tile || !tile.empty?
 
@@ -258,62 +228,9 @@ class Dungeon
     check_states = [TileType::EMPTY]
 
     room.perimeter_w_corner_tiles.each do |corner|
-      corner.get_neighbors(check_states).each do |neighbor|
+      @grid.get_neighbors(corner, check_states).each do |neighbor|
         neighbor.become_padding
-        neighbor.get_neighbors(check_states).each(&:become_padding)
-      end
-    end
-  end
-
-  # Safely attempt to get a Tile from the grid
-  # @param [Integer] x
-  # @param [Integer] y
-  def get_tile(x, y)
-    @grid[x][y] if x > -1 && x < @cols && y > -1 && y < @rows
-  end
-
-  # Construct the base Tile grid for the dungeon
-  # @return [Array<Array<Tile>>] grid
-  def construct_grid
-    grid = Array.new(@cols) { Array.new(@rows) }
-    (0...@cols).each do |x|
-      (0...@rows).each do |y|
-        grid[x][y] = Tile.new(x, y)
-      end
-    end
-
-    grid
-  end
-
-  # Set the 4 orthogonal neighbors for each Tile in the grid
-  def set_neighbors
-    (0...@cols).each do |x|
-      (0...@rows).each do |y|
-        tile = @grid[x][y]
-        tile_pos = Vector2.new(tile.x, tile.y)
-        theoretical_neighbors = [
-          tile_pos.add(@orthogonal_neighbors[0]),
-          tile_pos.add(@orthogonal_neighbors[1]),
-          tile_pos.add(@orthogonal_neighbors[2]),
-          tile_pos.add(@orthogonal_neighbors[3])
-        ]
-
-        neighbors = []
-        theoretical_neighbors.each do |coord|
-          neighbor_tile = get_tile(coord.x, coord.y)
-          neighbors.append(neighbor_tile) if neighbor_tile
-        end
-
-        tile.set_neighbors(neighbors)
-      end
-    end
-  end
-
-  # Update the neighbor states for all Tiles in the grid
-  def update_neighbors
-    (0...@cols).each do |x|
-      (0...@rows).each do |y|
-        @grid[x][y].update_neighbor_states
+        @grid.get_neighbors(neighbor, check_states).each(&:become_padding)
       end
     end
   end
