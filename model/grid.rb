@@ -7,6 +7,8 @@ class Grid
 
   attr_reader :orthogonal
 
+  # @param [Integer] pixel_width
+  # @param [Integer] pixel_height
   def initialize(pixel_width, pixel_height)
     @cols = pixel_width / (Constants::TILE_SIZE + Constants::MARGIN)
     @rows = pixel_height / (Constants::TILE_SIZE + Constants::MARGIN)

@@ -26,6 +26,12 @@ class Vector2
     @x == 0 && @y == 0
   end
 
+  # Zero out the vector
+  def zero
+    @x = 0
+    @y = 0
+  end
+
   # @param [Vector2] other_vector
   # @return [Vector2] new Vector instance with sum of the two Vector
   def add(other_vector)

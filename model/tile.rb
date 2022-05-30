@@ -1,10 +1,12 @@
+require 'gosu'
+
 require './module/colors'
 require './module/constants'
 require './module/tile_type'
 
 # Describes a single Tile on the world grid
 class Tile
-  attr_reader :x, :y, :pixel_x, :pixel_y, :room_id, :hall_id
+  attr_reader :x, :y, :room_id, :hall_id
 
   # @param [Integer] x: Grid X coordinate of the tile
   # @param [Integer] y: Grid Y coordinate of the tile
@@ -16,6 +18,8 @@ class Tile
     @room_id = -1
     @hall_id = -1
     @state = TileType::EMPTY
+    @frame = 0
+    @color = Colors::EMPTY
   end
 
   ######################
@@ -89,35 +93,106 @@ class Tile
     @state == TileType::WATER
   end
 
+  def start?
+    @state == TileType::START_POINT
+  end
+
+  def end?
+    @state == TileType::END_POINT
+  end
+
+  def explored?
+    @state == TileType::EXPLORED
+  end
+
   ######################
   # TILE BECOME STATE
   ######################
 
   def become_empty
     @state = TileType::EMPTY
+    @color = Colors::EMPTY
   end
 
   def become_floor
     @state = TileType::FLOOR
+    @color = Colors::FLOOR
   end
 
   def become_wall
     @state = TileType::WALL
+    @color = Colors::WALL
   end
 
   def become_corner
     @state = TileType::CORNER
+    @color = Colors::CORNER
   end
 
   def become_hall
     @state = TileType::HALL
+    @color = Colors::HALL
   end
 
   def become_padding
     @state = TileType::PADDING
+    @color = Colors::PADDING
   end
 
   def become_water
     @state = TileType::WATER
+    @color = Colors::WATER
+  end
+
+  def become_start_point
+    @state = TileType::START_POINT
+    @color = Colors::ENDPOINT
+  end
+
+  def become_end_point
+    @state = TileType::END_POINT
+    @color = Colors::ENDPOINT
+  end
+
+  def become_explored
+    @frame = 60
+    @state = TileType::EXPLORED
+    @color = Colors::EXPLORE_0
+  end
+
+  def become_path
+    @state = TileType::PATH
+    @color = Colors::PATH
+  end
+
+  def update
+    return unless explored? && @frame.positive?
+
+    @frame -= 1
+    if @frame == 50
+      @color = Colors::EXPLORE_1
+    elsif @frame == 40
+      @color = Colors::EXPLORE_2
+    elsif @frame == 30
+      @color = Colors::EXPLORE_3
+    elsif @frame == 20
+      @color = Colors::EXPLORE_4
+    elsif @frame == 10
+      @color = Colors::EXPLORE_5
+    end
+  end
+
+  def draw
+    update
+
+    Gosu.draw_rect(@pixel_x, @pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, @color)
+  end
+
+  def to_str
+    "#{@x}, #{@y}"
+  end
+
+  def ==(other)
+    @x == other.x && @y == other.y
   end
 end

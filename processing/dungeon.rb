@@ -12,6 +12,15 @@ class Dungeon
   attr_accessor :room_map, :hall_map
   attr_reader :grid, :rows, :cols, :progress_pct
 
+  # @param [Integer] pixel_width
+  # @param [Integer] pixel_height
+  # @param [Integer] target_rooms
+  # @param [Integer] min_room_width
+  # @param [Integer] max_room_width
+  # @param [Integer] min_room_height
+  # @param [Integer] max_room_height
+  # @param [Integer] min_hall_length
+  # @param [Integer] max_hall_length
   def initialize(
     pixel_width:,
     pixel_height:,
@@ -233,5 +242,9 @@ class Dungeon
         @grid.get_neighbors(neighbor, check_states).each(&:become_padding)
       end
     end
+  end
+
+  def draw
+    @grid.each(&:draw)
   end
 end
