@@ -12,22 +12,22 @@ class Window < Gosu::Window
     super(Constants::SCREEN_WIDTH, Constants::SCREEN_HEIGHT, false)
     self.caption = 'Probable Journey'
     self.borderless = false
-    self.update_interval = 16.6
+    self.update_interval = 4
 
-    @font = Gosu::Font.new(self, 'Source Code Pro', 21)
+    @font = Gosu::Font.new(self, 'Consolas', 21)
     @start_clicked = nil
     @end_clicked = nil
 
     @dungeon = Dungeon.new(
       pixel_width: Constants::SCREEN_WIDTH,
       pixel_height: Constants::SCREEN_HEIGHT,
-      target_rooms: 14,
+      target_rooms: 20,
       min_room_width: 3,
-      max_room_width: 5,
+      max_room_width: 9,
       min_room_height: 3,
-      max_room_height: 5,
-      min_hall_length: 2,
-      max_hall_length: 6
+      max_room_height: 9,
+      min_hall_length: 1,
+      max_hall_length: 9
     )
 
     @pathfinding = Pathfinding.new(@dungeon.grid)
@@ -41,34 +41,39 @@ class Window < Gosu::Window
       @constructing = false
     end
 
-    if @pathfinding.working
-      if @pathfinding.step
-        path = @pathfinding.trace_path
-        path.each do |tile|
-          tile.become_path
-        end
-      end
-    end
+    return unless @pathfinding.working && @pathfinding.step
+
+    path = @pathfinding.trace_path
+    path.each(&:become_path)
   end
 
   def draw
     @dungeon.draw
 
-    @font.draw_text("#{mouse_x}, #{mouse_y}", 8, 8, 0)
+    draw_text("#{mouse_x}, #{mouse_y}", 8, 8)
     if @start_clicked
-      @font.draw_text("Start [#{@start_clicked.to_str}]", 8, 32, 0)
+      draw_text("Start [#{@start_clicked.to_str}]", 8, 32)
     else
-      @font.draw_text("Start [-, -]", 8, 32, 0)
+      draw_text("Start [-, -]", 8, 32)
     end
 
     if @end_clicked
-      @font.draw_text("End   [#{@end_clicked.to_str}]", 8, 48, 0)
+      draw_text("End   [#{@end_clicked.to_str}]", 8, 56)
     else
-      @font.draw_text("End   [-, -]", 8, 48, 0)
+      draw_text("End   [-, -]", 8, 56)
     end
+
+    progress = (@dungeon.progress_pct * 100).to_i
+    draw_text("Construction: #{progress}%", 8, 80)
+  end
+
+  def draw_text(msg, pos_x, pos_y)
+    @font.draw_text(msg, pos_x, pos_y, 0, 1, 1, Colors::TEXT)
   end
 
   def button_down(id)
+    return if @constructing
+
     if id == Gosu::MsLeft
       pos_x = (mouse_x / (Constants::TILE_SIZE + Constants::MARGIN)).to_i
       pos_y = (mouse_y / (Constants::TILE_SIZE + Constants::MARGIN)).to_i

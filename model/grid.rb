@@ -104,8 +104,8 @@ class Grid
   def find_central_perimeter_tiles
     center_col = (@cols - 1) / 2
     center_row = (@rows - 1) / 2
-    col_range = @cols / 3
-    row_range = @rows / 3
+    col_range = @cols / 8
+    row_range = @rows / 8
 
     col_min = center_col - col_range
     col_max = center_col + col_range
@@ -118,7 +118,7 @@ class Grid
       next unless tile.x.zero? || tile.x == (@cols - 1) || tile.y.zero? || tile.y == (@rows - 1)
 
       # Set entire perimeter as padding to not be used later
-      tile.become_padding
+      tile.become_perimeter
 
       if (tile.x > col_min && tile.x < col_max) || (tile.y > row_min && tile.y < row_max)
         center_perimeter_tiles.append(tile)

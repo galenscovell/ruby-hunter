@@ -20,6 +20,16 @@ class Tile
     @state = TileType::EMPTY
     @frame = 0
     @color = Colors::EMPTY
+
+    become_empty
+  end
+
+  def to_str
+    "#{@x}, #{@y}"
+  end
+
+  def ==(other)
+    @x == other.x && @y == other.y
   end
 
   ######################
@@ -116,27 +126,34 @@ class Tile
 
   def become_floor
     @state = TileType::FLOOR
-    @color = Colors::FLOOR
+    @color = Colors::FLOOR.sample
   end
 
   def become_wall
     @state = TileType::WALL
-    @color = Colors::WALL
+    @color = Colors::WALL.sample
   end
 
   def become_corner
     @state = TileType::CORNER
-    @color = Colors::CORNER
+    @color = Colors::WALL.sample
   end
 
   def become_hall
     @state = TileType::HALL
-    @color = Colors::HALL
+    # @color = Colors::HALL
+    @color = Colors::FLOOR.sample
   end
 
   def become_padding
     @state = TileType::PADDING
-    @color = Colors::PADDING
+    # @color = Colors::PADDING
+    @color = Colors::EMPTY
+  end
+
+  def become_perimeter
+    @state = TileType::PADDING
+    @color = Colors::PERIMETER
   end
 
   def become_water
@@ -155,9 +172,9 @@ class Tile
   end
 
   def become_explored
-    @frame = 60
+    @frame = 45
     @state = TileType::EXPLORED
-    @color = Colors::EXPLORE_0
+    @color = Gosu::Color::WHITE
   end
 
   def become_path
@@ -169,30 +186,21 @@ class Tile
     return unless explored? && @frame.positive?
 
     @frame -= 1
-    if @frame == 50
-      @color = Colors::EXPLORE_1
-    elsif @frame == 40
-      @color = Colors::EXPLORE_2
-    elsif @frame == 30
-      @color = Colors::EXPLORE_3
-    elsif @frame == 20
-      @color = Colors::EXPLORE_4
-    elsif @frame == 10
-      @color = Colors::EXPLORE_5
-    end
+    @color = lerp_color(Colors::EXPLORE_START, Colors::EXPLORE_END)
   end
 
   def draw
     update
-
     Gosu.draw_rect(@pixel_x, @pixel_y, Constants::TILE_SIZE, Constants::TILE_SIZE, @color)
   end
 
-  def to_str
-    "#{@x}, #{@y}"
-  end
-
-  def ==(other)
-    @x == other.x && @y == other.y
+  # @param [Color] color_1
+  # @param [Color] color_2
+  def lerp_color(color_1, color_2)
+    t = 1.0 - (@frame / 60.0)
+    r = color_1.red + (color_2.red - color_1.red) * t
+    g = color_1.green + (color_2.green - color_1.green) * t
+    b = color_1.blue + (color_2.blue - color_1.blue) * t
+    Gosu::Color.rgba(r, g, b, 255)
   end
 end

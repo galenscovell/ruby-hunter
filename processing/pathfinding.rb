@@ -12,7 +12,8 @@ class Pathfinding
     @start = nil
     @end = nil
     @working = false
-    @check_states = [TileType::FLOOR, TileType::HALL, TileType::END_POINT]
+    @path_check_states = [TileType::FLOOR, TileType::HALL, TileType::END_POINT]
+    @clear_check_states = [TileType::EXPLORED, TileType::START_POINT, TileType::END_POINT, TileType::PATH]
   end
 
   # Clear any previous scans
@@ -20,9 +21,7 @@ class Pathfinding
     @open.clear
     @closed.clear
     @tile_grid.each do |tile|
-     if tile.explored? || tile.start? || tile.end?
-       tile.become_floor
-     end
+      tile.become_floor if tile.one_of?(@clear_check_states)
     end
   end
 
@@ -46,6 +45,7 @@ class Pathfinding
 
     curr = best_option
     if curr.tile == @end.tile
+      @end = curr
       @working = false
       return true
     end
@@ -53,7 +53,7 @@ class Pathfinding
     @open.delete(curr)
     @closed.append(curr)
     @tile_grid.get_neighbors(curr.tile).each do |neighbor|
-      next unless neighbor&.one_of?(@check_states)
+      next unless neighbor&.one_of?(@path_check_states)
 
       neighbor_node = PathfindNode.new(neighbor)
 
