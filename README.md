@@ -1,12 +1,14 @@
+<img src='http://galenscovell.github.io/css/pics/probable-journey.png' width=500px />
+
 # Probable-Journey
 
 ### Description
 
 Procedurally generates a dungeon composed of rooms, halls and tiles. 
 The user is then able to click tiles within the dungeon, and a pathfinding visualization 
-will be displayed showing the shortest Euclidean A* path between those points.
+will be displayed showing a Euclidean A* path between those points.
 
-I created this project over the course of a few days to ramp back up on Ruby for an interview! ^^
+I created this over the course of a few days to ramp back up on Ruby for an interview! ^^
 
 ### Running
 * `bundle install`
@@ -14,3 +16,5 @@ I created this project over the course of a few days to ramp back up on Ruby for
 
 ### Running Tests
 * `rspec .\spec -f d`
+
+<img src='http://galenscovell.github.io/css/pics/probable-journey.gif' width=600px />
