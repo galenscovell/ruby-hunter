@@ -1,4 +1,4 @@
-<img src='http://galenscovell.github.io/css/pics/probable-journey.png' width=500px />
+<img src='http://galenscovell.github.io/css/pics/probable-journey.png' width=600px />
 
 # Probable-Journey
 
@@ -17,4 +17,4 @@ I created this over the course of a few days to ramp back up on Ruby for an inte
 ### Running Tests
 * `rspec .\spec -f d`
 
-<img src='http://galenscovell.github.io/css/pics/probable-journey.gif' width=600px />
+<img src='http://galenscovell.github.io/css/pics/probable-journey.gif' width=800px />
