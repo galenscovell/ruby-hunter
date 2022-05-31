@@ -1,4 +1,5 @@
 require './model/tile'
+require './model/vector2'
 require './module/constants'
 
 # Defines a 2D array of Tiles corresponding to a grid.
@@ -39,6 +40,10 @@ class Grid
   # Iterate across all Tiles in grid, doing something with each one.
   def each(&block)
     @elements.each(&block)
+  end
+
+  def count
+    @elements.count
   end
 
   # Safely attempt to get a Tile from the grid

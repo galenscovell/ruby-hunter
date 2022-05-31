@@ -6,7 +6,21 @@ require './module/constants'
 describe Tile do
   let(:tile) { Tile.new(2, 5) }
 
-  context 'When creating Tile object' do
+  it 'can be printed' do
+    expect(tile.to_str).to eq('2, 5')
+  end
+
+  context 'When comparing' do
+    it 'has proper equality' do
+      expect(tile == Tile.new(2, 5)).to eq(true)
+    end
+
+    it 'has proper inequality' do
+      expect(tile == Tile.new(2, 4)).to eq(false)
+    end
+  end
+
+  context 'When creating' do
     it 'has coordinates' do
       expect(tile.x).to eq(2)
       expect(tile.y).to eq(5)
@@ -25,7 +39,7 @@ describe Tile do
     end
   end
 
-  context 'When modifying Tile details' do
+  context 'When modifying' do
     it 'updates state correctly' do
       expect(tile.empty?).to eq(true)
       tile.become_wall
@@ -34,6 +48,22 @@ describe Tile do
       tile.become_floor
       expect(tile.wall?).to eq(false)
       expect(tile.floor?).to eq(true)
+    end
+
+    it 'can become part of room' do
+      expect(tile.room_id).to eq(-1)
+      tile.set_room(1)
+      expect(tile.room_id).to eq(1)
+      tile.remove_room
+      expect(tile.room_id).to eq(-1)
+    end
+
+    it 'can become part of hall' do
+      expect(tile.hall_id).to eq(-1)
+      tile.set_hall(1)
+      expect(tile.hall_id).to eq(1)
+      tile.remove_hall
+      expect(tile.hall_id).to eq(-1)
     end
   end
 end
